@@ -1,64 +1,60 @@
 <template>
   <q-page>
     <div class="q-pa-md">
-      <div class="q-table__container q-table--horizontal-separator column no-wrap q-table__card q-table--no-wrap" style="height: auto;">
-        <div class="q-table__top relative-position row items-center">
-            <div class="q-table__control">
-              <div class="q-table__title">
-                <q-btn color="secondary" @click="add()" class="justify-end" label="Tambah" />
-              </div>
-            </div>
-        </div>
-        <div class="q-table__middle ">
-            <table class="q-table">
-              <thead>
-                <tr class="q-tr">
-                    <th class="text-left sortable">Title</th>
-                    <th class="text-left sortable" width="10%">Action</th>
-                </tr>
-              </thead>
-              <tbody class="q-virtual-scroll__content" id="qvs_1" tabindex="-1">
-                <tr class="q-tr " v-for="(item, index) in datas" :key="index">
-                  <td class="q-td ">{{item.title}}</td>
-                  <td class="q-td text-left">
-                    <q-btn color="red" label="Hapus" /> &nbsp;
-                    <q-btn color="primary" @click="edit(item)" label="Edit" />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-        </div>
-        <div class="q-table__bottom row items-center justify-end">
-            <div class="q-table__separator col"></div>
-            <div class="q-table__control"><span></span></div>
-        </div>
-      </div>
+      <q-table 
+        title="Posts" 
+        :rows="datas"
+        :columns="columns"
+        row-key="title" 
+        :rows-per-page-options="[0]" >
+        <template v-slot:top>
+          <q-btn dense color="secondary" label="Add Posts" @click="add" no-caps></q-btn>
+          <div class="q-pa-sm q-gutter-sm">
+            <q-dialog 
+              v-model="formDialog"  >
+              <q-card style="min-width: 350px;max-width:100%">
+                <q-bar>
+                  <q-space></q-space>
 
-      <q-dialog 
-        v-model="formDialog" 
-        :maximized="maximizedToggle" >
-        <q-card style="min-width: 350px;max-width:100%">
-          <q-bar>
-            <q-icon name="network_wifi"></q-icon>
-            <q-space></q-space>
+                  <q-btn dense flat icon="close" v-close-popup>
+                    <q-tooltip>Close</q-tooltip>
+                  </q-btn>
+                </q-bar>
 
-            <q-btn dense flat icon="close" v-close-popup>
-              <q-tooltip>Close</q-tooltip>
-            </q-btn>
-          </q-bar>
+                <q-card-section>
+                  <div class="text-h6">Add new posts!</div>
+                </q-card-section>
 
-          <q-card-section>
-            <q-input
-              filled
-              v-model="form.title"
-              class="q-mt-md"
-              label="Title *"
-            />
-            <q-editor v-model="form.body" class="q-mt-md" min-height="5rem"></q-editor>
-            <q-btn color="secondary" @click="saveData" class="justify-end q-mt-md" label="Simpan" />
-          </q-card-section>
-        </q-card>
-      </q-dialog>
+                <q-card-section>
+                  <div class="row">
+                    <div class="col-12">
+                      <q-input
+                        filled
+                        v-model="form.title"
+                        class="q-mt-md"
+                        label="Title *"
+                      />
+                    </div>
+                    <div class="col-12">
+                      <q-editor v-model="form.body" class="q-mt-md" min-height="5rem"></q-editor>
+                    </div>
+                    <div class="col-12">
+                      <q-btn color="secondary" @click="saveData" class="justify-end q-mt-md" label="Simpan" />
+                    </div>
+                  </div>
+                </q-card-section>
+              </q-card>
+            </q-dialog>
+          </div>
+        </template>
+
+        <template v-slot:body-cell-actions="props">
+          <q-td :props="props">
+            <q-btn color="blue" label="Update" @click="edit(props.row)" size=sm no-caps></q-btn>
+            <q-btn color="red" label="Delete"  @click="deleteData(props.row.id)" size=sm no-caps></q-btn>
+          </q-td>
+        </template>
+      </q-table>
     </div>
   </q-page>
 </template>
@@ -66,13 +62,20 @@
 <script>
 import { defineComponent } from 'vue';
 import { api } from 'boot/axios'
+import { Notify } from 'quasar'
 
 export default defineComponent({
   name: 'PageIndex',
    data() {
     return {
+      columns: [
+        { name: 'title', align: 'left', label: 'Title', field: 'title' },
+        //{ name: 'body', align: 'left', label: 'Body', field: 'body'},
+        { name: 'actions', align: 'center', label: 'Action'},
+      ],
       datas: [],
       formDialog: false,
+      confirm: false,
       iId: null,
       maximizedToggle: true,
       form: {
@@ -110,7 +113,7 @@ export default defineComponent({
     }, 
     async saveData() {
       if(this.iId) {
-        let res = await api.put('/posts/' + this.iId, this.form)
+        let res = await api.put('posts/' + this.iId, this.form)
         .then(function (response) {
           if(response.data.success) {
             return response.data.success;
@@ -122,13 +125,14 @@ export default defineComponent({
         if(res) {
           this.loadData();
           this.formDialog = false
+          Notify.create({
+            message: 'Update Post'
+          })
         }
       } else {
-        let res = await api.post('/posts', this.form)
+        let res = await api.post('posts', this.form)
         .then(function (response) {
           if(response.data.success) {
-            this.loadData();
-            this.formDialog = false
             return response.data.success;
           }
         })
@@ -138,9 +142,23 @@ export default defineComponent({
         if(res) {
           this.loadData();
           this.formDialog = false
+          Notify.create({
+            message: 'Create New Posts'
+          })
         }
       }
-    }
+    },
+    async deleteData(id) {
+      await api.delete('posts/' + id)
+        .then((response) => {
+          this.loadData();
+          Notify.create({
+            message: 'Delete Posts'
+          })
+        })
+        .catch(() => {
+      });
+    }, 
   },
   watch() {
     
