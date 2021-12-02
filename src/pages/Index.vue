@@ -50,7 +50,7 @@
 
         <template v-slot:body-cell-actions="props">
           <q-td :props="props">
-            <q-btn color="blue" label="Update" @click="edit(props.row)" size=sm no-caps></q-btn>
+            <q-btn color="blue" label="Update" @click="edit(props.row)" class="q-mr-lg" size=sm no-caps></q-btn>
             <q-btn color="red" label="Delete"  @click="deleteData(props.row.id)" size=sm no-caps></q-btn>
           </q-td>
         </template>
@@ -70,7 +70,6 @@ export default defineComponent({
     return {
       columns: [
         { name: 'title', align: 'left', label: 'Title', field: 'title' },
-        //{ name: 'body', align: 'left', label: 'Body', field: 'body'},
         { name: 'actions', align: 'center', label: 'Action'},
       ],
       datas: [],
